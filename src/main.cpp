@@ -9,7 +9,24 @@
 #define LatchReset 8
 
 class C_5261AS{
-  const int digits [10];
+  const int digits [17] = { 0x11,
+                            0x9F,
+                            0xCE,
+                            0x47,
+                            0xCD,
+                            0xDD,
+                            0xC2,
+                            0xDF,
+                            0xCF,
+                            0xDB,
+                            0xD7,
+                            0x5D,
+                            0x99,
+                            0x5E,
+                            0x9D,
+                            0x95
+};
+const int DP = 0b00100000;
   public:
     //false = DPin; true = UPin
     bool active;
