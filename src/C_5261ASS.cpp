@@ -1,67 +1,70 @@
 #include <Arduino.h>
 #include "C_5261ASS.h"
 
-const int digits[16] = {
-    0xDB ,0x11, 0x9F, 0xCE, 0x47,
-    0xCD, 0xDD, 0xC2, 0xDF, 0xCF,
-    0xD7, 0x5D, 0x99, 0x5E, 0x9D,
-    0x95
+const uint8_t digits[16] = {
+    //G F E D C B A DP
+    0b01111110, // 0
+    0b00001100, // 1
+    0b10110110, // 2
+    0b10011110, // 3
+    0b11001100, // 4
+    0b11011010, // 5
+    0b11111010, // 6
+    0b00001110, // 7
+    0b11111110, // 8
+    0b11011110, // 9
+    0b11101110, // A
+    0b11111000, // B
+    0b01110010, // C
+    0b10111100, // D
+    0b11110010, // E
+    0b11100010  // F
 };
 
-const int DP = 0b00100000;
-
-C_5261AS::C_5261AS(int d, int u, int ser, int oe, int shClk, int lcClk, int rst) {
+C_5261AS::C_5261AS(int d, int u, int ser, int shClk, int lcClk) {
     active = false;
     DPin = d;
     UPin = u;
     SerialPin = ser;
-    outputEnable = oe;
     shiftClock = shClk;
     latchClock = lcClk;
-    reset = rst;
-    printPins();
+    valorDecimal = 0;
+    valorUnidade = 0;
     initPins();
+    printPins();
 }
 
-void C_5261AS::printPins() {
-    Serial.print("active: ");
-    Serial.println(active ? "DPin" : "UPin");
+void C_5261AS::printPins() const {
     Serial.print("UnitPin: ");
     Serial.println(UPin);
     Serial.print("DecimalPin: ");
     Serial.println(DPin);
     Serial.print("Serial Output: ");
     Serial.println(SerialPin);
-    Serial.print("OutputEnable: ");
-    Serial.println(outputEnable);
     Serial.print("Shift Clock: ");
     Serial.println(shiftClock);
     Serial.print("Latch Clock: ");
     Serial.println(latchClock);
-    Serial.print("Reset: ");
-    Serial.println(reset);
 }
 
-void C_5261AS::initPins() {
+void C_5261AS::initPins() const {
     pinMode(DPin, OUTPUT);
     pinMode(UPin, OUTPUT);
     pinMode(SerialPin, OUTPUT);
-    pinMode(outputEnable, OUTPUT);
     pinMode(shiftClock, OUTPUT);
     pinMode(latchClock, OUTPUT);
-    pinMode(reset, OUTPUT);
 
     digitalWrite(DPin, HIGH);
     digitalWrite(UPin, HIGH);
     digitalWrite(SerialPin, LOW);
-    digitalWrite(outputEnable, LOW);
     digitalWrite(shiftClock, LOW);
     digitalWrite(latchClock, LOW);
-    digitalWrite(reset, LOW);
 }
 
-void C_5261AS::changeDisplay(bool d) {
+void C_5261AS::changeDisplay(const bool d) {
     active = d;
+    // Serial.println(d);
+    // Serial.println(!d);
     digitalWrite(DPin, d);
     digitalWrite(UPin, !d);
     // digitalWrite(DPin, active ? HIGH : LOW);
@@ -69,47 +72,59 @@ void C_5261AS::changeDisplay(bool d) {
     // active = false;
 }
 
-void C_5261AS::sendCharacter(String input){
+void C_5261AS::sendCharacter(String input, bool dpDecimal, bool dpUnidade){
     input.trim();
 
-    int num = -1;
+    // Aceita entrada hexadecimal sempre
+    int num = strtol(input.c_str(), NULL, 16);
 
-    if(input.length() <= 2 && isDigit(input[0])){
-        num = input.toInt();
-    }
-
-    if(num < 0 || num>99){
-        num = strtol(input.c_str(), NULL, 16);
-    }
-
-
-
-    if(num >= 0 && num<= 255){
+    if (num >= 0 && num <= 255) {
         int dezena = num / 16;
         int unidade = num % 16;
 
-        Serial.print("Sending: "); Serial.print(dezena, HEX); Serial.print(" "); Serial.println(unidade, HEX);
-        sendToDisplay(dezena, unidade);
-    }else{
+        sendToDisplay(dezena, unidade, dpDecimal, dpUnidade);
+    } else {
         Serial.println("Entrada inválida");
     }
 }
 
-void C_5261AS::sendToDisplay(int dezenaHex, int unidadeHex){
+void C_5261AS::sendCharacter(int input, bool dpDecimal, bool dpUnidade) {
+    if (input >= 0 && input <= 255) {
+        int dezena = input / 16;
+        int unidade = input % 16;
+
+        sendToDisplay(dezena, unidade, dpDecimal, dpUnidade);
+    } else {
+        Serial.println("Entrada inválida");
+    }
+}
+
+void C_5261AS::sendToDisplay(int dezenaHex, int unidadeHex, bool dpDecimal, bool dpUnidade){
     if (dezenaHex < 0 || dezenaHex > 15 || unidadeHex < 0 || unidadeHex > 15) return;
 
-    byte valorDecimal = digits[dezenaHex];
-    byte valorUnidade = digits[unidadeHex];
+    valorDecimal = digits[dezenaHex];
+    valorUnidade = digits[unidadeHex];
+    if (dpDecimal) valorDecimal |= 0b00000001;
+    if (dpUnidade) valorUnidade |= 0b00000001;
+
+}
+
+void C_5261AS::updateDisplay() {
+    unsigned long now = millis();
+    if (now - lastUpdate < 5) return;  // alterna a cada 5ms (~100Hz)
+    lastUpdate = now;
 
     digitalWrite(latchClock, LOW);
-    shiftOut(SerialPin, shiftClock, MSBFIRST, valorDecimal);
-    changeDisplay(true);
+    if (showingDecimal) {
+        shiftOut(SerialPin, shiftClock, MSBFIRST, valorDecimal);
+        changeDisplay(true);
+    } else {
+        shiftOut(SerialPin, shiftClock, MSBFIRST, valorUnidade);
+        changeDisplay(false);
+    }
     digitalWrite(latchClock, HIGH);
 
-    digitalWrite(latchClock, LOW);
-    shiftOut(SerialPin, shiftClock, MSBFIRST, valorUnidade);
-    changeDisplay(false);
-    digitalWrite(latchClock, HIGH);
+    showingDecimal = !showingDecimal;  // alterna
 }
 
 

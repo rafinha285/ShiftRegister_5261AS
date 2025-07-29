@@ -3,24 +3,27 @@
 
 class C_5261AS {
 public:
+
+    C_5261AS(int d, int u, int ser, int shClk, int lcClk);
+    void sendCharacter(String input, bool dpDecimal, bool dpUnidade);
+    void sendCharacter(int input, bool dpDecimal, bool dpUnidade);
+    void updateDisplay();
+
+private:
     bool active;
     int DPin;
     int UPin;
     int SerialPin;
-    int outputEnable;
     int shiftClock;
     int latchClock;
-    int reset;
-
-    C_5261AS(int d, int u, int ser, int oe, int shClk, int lcClk, int rst);
-    void sendCharacter(String input);
-
-private:
-    void printPins();
-    void initPins();
+    byte valorDecimal;
+    byte valorUnidade;
+    unsigned long lastUpdate = 0;
+    bool showingDecimal = true;
+    void printPins() const;
+    void initPins() const;
     void changeDisplay(bool d);
-    int getPatternFromHex(uint8_t hex);
-    void sendToDisplay(int dezenaHex, int unidadeHex);
+    void sendToDisplay(int dezenaHex, int unidadeHex, bool dpDecimal, bool dpUnidade);
 };
 
 #endif
