@@ -4,14 +4,56 @@
 
 C_5261AS* global_instance = nullptr;
 
+//contructors
+
+C_5261AS::C_5261AS(int d, int u, int ser, int shClk, int lcClk) {
+    DPin = d;
+    UPin = u;
+    serialPin = ser;
+    shiftClock = shClk;
+    latchClock = lcClk;
+    valorDecimal = 0;
+    valorUnidade = 0;
+    initPins();
+    printPins();
+    this->setTime(5);
+}
+C_5261AS::C_5261AS(int d, int u, int ser, int shClk, int lcClk, int time) {
+    C_5261AS(d,u,ser,shClk,lcClk);
+    this->setTime(time);
+}
+
+//setters
+
+void C_5261AS::setSerialPin(int serialPin){
+    this->serialPin = serialPin;
+}
+
+void C_5261AS::setShiftClockPin(int shiftClock){
+    this->shiftClock = shiftClock;
+}
+
+void C_5261AS::setLatchClockPin(int latchClock){
+    this->latchClock = latchClock;
+}
+
+void C_5261AS::setTime(int time){
+    this->time = time;
+    beginTimer(this->time);
+}
+
+
+
 void timerInterruptHandler() {
     if (global_instance != nullptr) {
         global_instance->interruptUpdate();
     }
 }
+
 void C_5261AS::beginTimer(int time) {
     global_instance = this;
-    Timer1.initialize(time * 1000);  // 5ms -> 100Hz multiplex
+    // global_instance->time = time;
+    Timer1.initialize(this->time * 1000);  // 5ms -> 100Hz multiplex
     Timer1.attachInterrupt(timerInterruptHandler);
 }
 
@@ -35,26 +77,13 @@ const uint8_t digits[16] = {
     0b11100010  // F
 };
 
-C_5261AS::C_5261AS(int d, int u, int ser, int shClk, int lcClk) {
-    active = false;
-    DPin = d;
-    UPin = u;
-    SerialPin = ser;
-    shiftClock = shClk;
-    latchClock = lcClk;
-    valorDecimal = 0;
-    valorUnidade = 0;
-    initPins();
-    printPins();
-}
-
 void C_5261AS::printPins() const {
     Serial.print("UnitPin: ");
     Serial.println(UPin);
     Serial.print("DecimalPin: ");
     Serial.println(DPin);
     Serial.print("Serial Output: ");
-    Serial.println(SerialPin);
+    Serial.println(serialPin);
     Serial.print("Shift Clock: ");
     Serial.println(shiftClock);
     Serial.print("Latch Clock: ");
@@ -64,26 +93,20 @@ void C_5261AS::printPins() const {
 void C_5261AS::initPins() const {
     pinMode(DPin, OUTPUT);
     pinMode(UPin, OUTPUT);
-    pinMode(SerialPin, OUTPUT);
+    pinMode(serialPin, OUTPUT);
     pinMode(shiftClock, OUTPUT);
     pinMode(latchClock, OUTPUT);
 
     digitalWrite(DPin, HIGH);
     digitalWrite(UPin, HIGH);
-    digitalWrite(SerialPin, LOW);
+    digitalWrite(serialPin, LOW);
     digitalWrite(shiftClock, LOW);
     digitalWrite(latchClock, LOW);
 }
 
 void C_5261AS::changeDisplay(const bool d) {
-    active = d;
-    // Serial.println(d);
-    // Serial.println(!d);
     digitalWrite(DPin, d);
     digitalWrite(UPin, !d);
-    // digitalWrite(DPin, active ? HIGH : LOW);
-    // digitalWrite(UPin, active ? LOW : HIGH);
-    // active = false;
 }
 
 void C_5261AS::sendCharacter(String input, bool dpDecimal, bool dpUnidade){
@@ -126,10 +149,10 @@ void C_5261AS::sendToDisplay(int dezenaHex, int unidadeHex, bool dpDecimal, bool
 void C_5261AS::interruptUpdate() {
     digitalWrite(latchClock, LOW);
     if (showingDecimal) {
-        shiftOut(SerialPin, shiftClock, MSBFIRST, valorDecimal);
+        shiftOut(serialPin, shiftClock, MSBFIRST, valorDecimal);
         changeDisplay(true);
     } else {
-        shiftOut(SerialPin, shiftClock, MSBFIRST, valorUnidade);
+        shiftOut(serialPin, shiftClock, MSBFIRST, valorUnidade);
         changeDisplay(false);
     }
     digitalWrite(latchClock, HIGH);

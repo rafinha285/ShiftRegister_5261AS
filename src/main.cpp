@@ -19,8 +19,8 @@ void setup(){
     Serial.begin(9600);
     delay(1000);  // espera a inicialização da serial
     Serial.println("Iniciando...");
-    ci = new C_5261AS(DecimalPin, UnitPin, SerialOPin, SerialClock, LatchClock);
-    ci->beginTimer(5);
+    ci = new C_5261AS(DecimalPin, UnitPin, SerialOPin, SerialClock, LatchClock,5);
+    // ci->beginTimer(5); // 5ms
 }
 
 void loop(){
