@@ -7,7 +7,8 @@ public:
     C_5261AS(int d, int u, int ser, int shClk, int lcClk);
     void sendCharacter(String input, bool dpDecimal, bool dpUnidade);
     void sendCharacter(int input, bool dpDecimal, bool dpUnidade);
-    void updateDisplay();
+    void interruptUpdate();
+    void beginTimer(int time);
 
 private:
     bool active;

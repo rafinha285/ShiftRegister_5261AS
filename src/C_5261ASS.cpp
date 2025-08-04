@@ -1,5 +1,19 @@
 #include <Arduino.h>
 #include "C_5261ASS.h"
+#include <TimerOne.h>
+
+C_5261AS* global_instance = nullptr;
+
+void timerInterruptHandler() {
+    if (global_instance != nullptr) {
+        global_instance->interruptUpdate();
+    }
+}
+void C_5261AS::beginTimer(int time) {
+    global_instance = this;
+    Timer1.initialize(time * 1000);  // 5ms -> 100Hz multiplex
+    Timer1.attachInterrupt(timerInterruptHandler);
+}
 
 const uint8_t digits[16] = {
     //G F E D C B A DP
@@ -109,11 +123,7 @@ void C_5261AS::sendToDisplay(int dezenaHex, int unidadeHex, bool dpDecimal, bool
 
 }
 
-void C_5261AS::updateDisplay() {
-    unsigned long now = millis();
-    if (now - lastUpdate < 5) return;  // alterna a cada 5ms (~100Hz)
-    lastUpdate = now;
-
+void C_5261AS::interruptUpdate() {
     digitalWrite(latchClock, LOW);
     if (showingDecimal) {
         shiftOut(SerialPin, shiftClock, MSBFIRST, valorDecimal);
@@ -123,8 +133,7 @@ void C_5261AS::updateDisplay() {
         changeDisplay(false);
     }
     digitalWrite(latchClock, HIGH);
-
-    showingDecimal = !showingDecimal;  // alterna
+    showingDecimal = !showingDecimal;
 }
 
 

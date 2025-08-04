@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "C_5261ASS.h"
+// #include <TimerOne.h>
 
 #define UnitPin 30
 #define DecimalPin 28
@@ -19,19 +20,11 @@ void setup(){
     delay(1000);  // espera a inicialização da serial
     Serial.println("Iniciando...");
     ci = new C_5261AS(DecimalPin, UnitPin, SerialOPin, SerialClock, LatchClock);
-    // ci.sendCharacter("FF");
-    ci->sendCharacter(0xef, false, false);
+    ci->beginTimer(5);
 }
 
 void loop(){
-    ci->updateDisplay(); // Sempre mantém o display funcionando
-    unsigned long now = millis();
-    if (now - lastUpdate >= 200) {  // A cada 500ms
-        lastUpdate = now;
-        ci->sendCharacter(currentChar++, currentChar % 4, currentChar % 2);
-        if (currentChar > 255) currentChar = 0;
-    }
-    // ci->sendCharacter(currentChar++);
-    // if (currentChar > 255) currentChar = 0;
-    // delay(500);
+    ci->sendCharacter(currentChar++, currentChar % 4, currentChar % 2);
+    if (currentChar > 255) currentChar = 0;
+    delay(500); 
 }
